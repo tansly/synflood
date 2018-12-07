@@ -156,9 +156,11 @@ int main(void)
         .sin_addr.s_addr = ip_header.daddr
     };
 
-    if (sendto(fd, packet_buf, sizeof packet_buf, 0, (struct sockaddr *)&sin, sizeof sin) == -1) {
-        perror("sendto()");
-        return 1;
+    for (;;) {
+        if (sendto(fd, packet_buf, sizeof packet_buf, 0, (struct sockaddr *)&sin, sizeof sin) == -1) {
+            perror("sendto()");
+            return 1;
+        }
     }
 
     return 0;
