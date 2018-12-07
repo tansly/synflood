@@ -12,7 +12,7 @@
 #include <unistd.h>
 
 #define SOURCE_IP "10.0.0.13"
-#define DEST_IP "127.0.0.1"
+#define DEST_IP "192.168.0.1"
 
 /*
  * The pseudo header that is used in checksum calculations.
@@ -110,7 +110,6 @@ int main(void)
 
     /*
      * Prepare the TCP header.
-     * XXX: Where is the header length field?
      * XXX: What can be the window size?
      */
     srand(time(NULL));
@@ -120,7 +119,7 @@ int main(void)
         .seq = random(),
         .ack_seq = 0,
         .res1 = 0,
-        .doff = 0,
+        .doff = 5,
         .fin = 0,
         .syn = 1,
         .rst = 0,
