@@ -164,7 +164,7 @@ int main(int argc, char **argv)
     /*
      * TODO: Use random source IP addresses chosen from a range.
      */
-    for (ip_header.saddr = inet_addr("10.0.0.2"); /* forever */ ;
+    for (ip_header.saddr = inet_addr("10.0.1.0"); /* forever */ ;
             ip_header.saddr = htonl((ntohl(ip_header.saddr) + 1))) {
 
         /*
@@ -194,7 +194,7 @@ int main(int argc, char **argv)
             perror("sendto()");
             return 1;
         }
-        usleep(1);
+        usleep(200000);
     }
 
     return 0;
