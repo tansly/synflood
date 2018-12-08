@@ -11,8 +11,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#define SOURCE_IP "10.0.0.13"
-
 /*
  * The pseudo header that is used in checksum calculations.
  * From http://www.enderunix.org/docs/en/rawipspoof/.
@@ -163,11 +161,11 @@ int main(int argc, char **argv)
         .urg_ptr = 0
     };
 
-    for (;;) {
-        /*
-         * TODO: Use random source IP addresses chosen from a range.
-         */
-        ip_header.saddr = inet_addr(SOURCE_IP);
+    /*
+     * TODO: Use random source IP addresses chosen from a range.
+     */
+    for (ip_header.saddr = inet_addr("10.0.0.2"); /* forever */ ;
+            ip_header.saddr = htonl((ntohl(ip_header.saddr) + 1))) {
 
         /*
          * See https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TCP_checksum_for_IPv4
