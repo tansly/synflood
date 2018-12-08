@@ -86,8 +86,8 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    /* Prepare the IP header.
-     * XXX: What should be the header length value?
+    /*
+     * Prepare the IP header.
      */
     struct iphdr ip_header = {
         /*
@@ -140,7 +140,6 @@ int main(int argc, char **argv)
     }
     /*
      * Prepare the TCP header.
-     * XXX: What can be the window size?
      */
     struct tcphdr tcp_header = {
         .source = 0, // Filled later
@@ -161,9 +160,6 @@ int main(int argc, char **argv)
         .urg_ptr = 0
     };
 
-    /*
-     * TODO: Use random source IP addresses chosen from a range.
-     */
     for (ip_header.saddr = inet_addr("10.0.1.0"); /* forever */ ;
             ip_header.saddr = htonl((ntohl(ip_header.saddr) + 1))) {
 
@@ -176,7 +172,7 @@ int main(int argc, char **argv)
             .dst.s_addr = ip_header.daddr,
             .pad = 0,
             .proto = ip_header.protocol,
-            .tcp_len = sizeof(tcp_header), // No payload in SYN. Size is only of the header.
+            .tcp_len = sizeof(tcp_header), // No payload, only the header.
             .tcp = tcp_header
         };
         tcp_header.source = htons((random() % (61000 - 32768 + 1)) + 32768);
@@ -194,7 +190,7 @@ int main(int argc, char **argv)
             perror("sendto()");
             return 1;
         }
-        usleep(200000);
+        usleep(200000); // This may be tuned further
     }
 
     return 0;
