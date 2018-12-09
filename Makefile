@@ -1,9 +1,10 @@
 CC=gcc
 CFLAGS=-Wall -Wextra -static -O2
 
-all: sender
+all: sender.out
 
-sender: sender.c
+sender.out: sender.c
+	$(CC) $(CFLAGS) sender.c -o sender.out
 
 clean:
-	rm -f sender
+	rm -f *.out
