@@ -1,4 +1,7 @@
-# PA2
+# synflood
+
+Bare-bones SYN flooding, no bullshit.
+No intelligent source IP/port selection whatsoever.
 
 Compile with `make`. Run as:
 `
